@@ -4,6 +4,7 @@
 #SYNOPSIS
 
 ```perl6
+use 
 {...}
 ```
 
