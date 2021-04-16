@@ -3,6 +3,10 @@
 
 Deploy Raku Cro on Google Kubernetes Engine (simple)
 
+#PREREQUISITES
+* Install Google Cloud SDK - viz. https://cloud.google.com/sdk/docs/quickstart
+* 
+
 #SYNOPSIS
 
 ```perl6
