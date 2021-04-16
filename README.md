@@ -3,8 +3,6 @@
 
 #SYNOPSIS
 
-_emphasis test_
-
 ```perl6
 {...}
 ```
