@@ -1,33 +1,36 @@
 #!/usr/bin/env raku
 use lib '../lib';
 
-#FIXME- change name to eg. deploy.raku??
-
 use Cro::Deploy::GKE::Simple;
 
 sub MAIN(
-        Str $app-path='../examples',
-        Str $app-name='hello-app',
-        Str $app-tag='v1',
+        Str $app-path='../examples/hello-app',
+        Str $app-name='helloweb',
+        Str $app-label='hello',
+        Str $cont-name='hello-app',
+        Str $cont-tag='1.0',
         Bool $run-local=False,
-        Bool $create-cluster=True,
          ) {
 
     #Cluster params
     my $cluster-name="{$app-name}-cluster";
-    my $replicas=3;
+    my $replicas=3;   #fixme remove these?
     my $cpu-percent=80;
     my $min=1;
     my $max=5;
 
-    #Service params
+    #Service params    #fixme remove these?
     my $service-name="{$app-name}-service";
     my $port=80;
     my $target-port=8080;
 
+    #Ingress params
+    my $ip-name="{$app-name}-ip";
+    my $ip-address;
+
     my $proc;       #re-used
 
-    $proc = shell "gcloud config list", :out;
+    $proc = shell("gcloud config list", :out);
     my $config = $proc.out.slurp: :close;
     my %config = $config.split("\n").grep(/'='/).split(" = ").split(" ");
 
@@ -36,14 +39,17 @@ sub MAIN(
 
     say $app-path;
     say $app-name;
-    say $app-tag;
+    say $app-label;
+    say $cont-name;
+    say $cont-tag;
+    say $cluster-name;
     say $project-id;
     say $project-zone;
 
-    chdir("$app-path/$app-name");
+    chdir("$app-path");
 
     say "Building and tagging docker image for GCR...";
-    shell("docker build -t gcr.io/$project-id/$app-name:$app-tag .");
+    shell("docker build -t gcr.io/$project-id/$cont-name:$cont-tag .");
 
     say "Checking docker image...";
     say "REPOSITORY                   TAG            IMAGE ID       CREATED             SIZE";
@@ -54,7 +60,7 @@ sub MAIN(
         $proc = Proc::Async.new("echo checking...");
         $proc.start;
         $proc.ready.then: {
-            shell("docker run --rm -p $target-port:$target-port gcr.io/$project-id/$app-name:$app-tag");
+            shell("docker run --rm -p $target-port:$target-port gcr.io/$project-id/$cont-name:$cont-tag");
         }
         sleep 2;
         shell("curl http://localhost:$target-port");
@@ -67,47 +73,56 @@ sub MAIN(
     shell("gcloud auth configure-docker");
 
     say "Pushing docker image to GCR...";
-    shell("docker push gcr.io/$project-id/$app-name:$app-tag");
+    shell("docker push gcr.io/$project-id/$cont-name:$cont-tag");
 
-    if $create-cluster {
+    sub cluster-up {
+        my $proc = shell "kubectl get nodes", :out;
+        my $out = $proc.out.slurp: :close;
+
+        if    $out ~~ /Ready/   { True  }
+        else                    { False }
+    }
+
+    say "Checking cluster status...";
+    if cluster-up() {
+        say "Cluster already created."
+    } else {
         say "Creating a GKE Standard cluster (please be patient) [$cluster-name]...";
         shell("gcloud container clusters create $cluster-name");
     }
-    say "Checking cluster..."; #fixme - check then create if needed
-    shell("kubectl get nodes");
 
-    say "Connect to cluster...";
-    shell("gcloud container clusters get-credentials $cluster-name --zone $project-zone");
+    chdir("manifests");
 
-    say "Create Kubernetes deployment...";
-    shell("kubectl create deployment $app-name --image=gcr.io/$project-id/$app-name:$app-tag");
-    shell("kubectl scale deployment $app-name --replicas=$replicas");
-    shell("kubectl autoscale deployment $app-name --cpu-percent=$cpu-percent --min=$min --max=$max");
-    shell("kubectl get pods");
+    say "Applying Deployment manifest {$app-name}-deployment.yaml.";
+    shell("kubectl apply -f {$app-name}-deployment.yaml");
 
-    say "Expose to Internet...";
-    shell("kubectl expose deployment $app-name --name=$service-name --type=LoadBalancer --port $port --target-port $target-port");
+    sub ip-address {
+        my $proc = shell "gcloud compute addresses describe $ip-name --global", :out;
+        my %ip-desc = ($proc.out.slurp: :close).lines.map({.split(": ")}).flat;
+        %ip-desc<address>;
+    }
 
-    $proc = shell "kubectl get service", :out;
-    my $service = $proc.out.slurp: :close;
+    say "Checking static IP address status...";
+    if $ip-address=ip-address() {
+        say "...static IP address $ip-address already created."
+    } else {
+        say "...creating a global static IP address with name $ip-name ...";
+        shell("gcloud compute addresses create $ip-name --global");
+        say "...done with IP address {$ip-address=ip-address}.";
+    }
 
-    say "deployment done";
+    say "Applying Ingress-Service manifest {$app-name}-ingress-static-ip.yaml.";
+    shell("kubectl apply -f {$app-name}-ingress-static-ip.yaml");
+    sleep 5;
+    shell("kubectl get ingress");
 
-    prompt("Status=Live, ready to Stop & Clean?[ret]");
+    say "deployment done...";
+    say "...takes approx. 3m30s to go live at $ip-address ...";
+    say "...use <<kubectl get ingress>> for status.";
 
-    say "Deleting service...";
-    shell("kubectl delete service $service-name");
-
-    say "Deleting cluster...";
-    shell("gcloud container clusters delete $cluster-name --zone $project-zone");
-
-    say "Deleting container image...";
-    shell("gcloud container images delete gcr.io/$project-id/$app-name:$app-tag  --force-delete-tags --quiet");
-
-    say "cleanup done";
-
-
-
-
-
+    #`[
+    also clean up
+    * static IP
+    * ingress
+    ]
 }
