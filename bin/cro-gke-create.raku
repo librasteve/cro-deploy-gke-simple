@@ -3,6 +3,18 @@ use lib '../lib';
 
 use Cro::Deploy::GKE::Simple;
 
+#`[
+my $app = Cro::App.new( name => 'hicro', project => 'hcccro1', version =>  '1.0' );
+
+my $dep-manifest = Deployment.new( app => $app );
+my $dfn = $dep-manifest.filename;
+my $ddc = $dep-manifest.document;
+
+my $isi-manifest = IngressStaticIP.new( app => $app );
+my $ifn = $isi-manifest.filename;
+my $idc = $isi-manifest.document;
+]
+
 sub MAIN(
         Str $app-path='../examples/hello-app',
         Str $app-name='helloweb',
@@ -14,10 +26,6 @@ sub MAIN(
 
     #Cluster params
     my $cluster-name="{$app-name}-cluster";
-    my $replicas=3;   #fixme remove these?
-    my $cpu-percent=80;
-    my $min=1;
-    my $max=5;
 
     #Service params    #fixme remove these?
     my $service-name="{$app-name}-service";
@@ -47,6 +55,8 @@ sub MAIN(
     say $project-zone;
 
     chdir("$app-path");
+
+    die;
 
     say "Building and tagging docker image for GCR...";
     shell("docker build -t gcr.io/$project-id/$cont-name:$cont-tag .");
