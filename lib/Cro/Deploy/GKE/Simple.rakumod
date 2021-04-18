@@ -5,6 +5,7 @@ class Cro::App is export {
     has Str $.name = 'hicro';
     has Str $.project = 'hcccro1';
     has Str $.version = '1.0';
+    has Str $.ip-address;
 
     method cont-name {
         "{ $.name }-app"
@@ -15,6 +16,12 @@ class Cro::App is export {
     method target-port {
         #cro stub sets ENV HICRO_HOST="0.0.0.0" HICRO_PORT="10000"
         %*ENV{"($.name.uc)_PORT"} // 8080
+    }
+    method cluster-name {
+        "{ $.name }-cluster"
+    }
+    method ip-name {
+        "{ $.name }-ip"
     }
 }
 
