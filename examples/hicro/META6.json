@@ -1,0 +1,32 @@
+{
+  "depends": [
+    "Cro::HTTP"
+  ],
+  "license": "Write me!",
+  "tags": [
+    ""
+  ],
+  "meta-version": "0",
+  "auth": "Write me!",
+  "name": "hicro",
+  "support": {
+    "source": "Write me!"
+  },
+  "source-url": "Write me!",
+  "authors": [
+    ""
+  ],
+  "raku": null,
+  "test-depends": [
+  ],
+  "resources": [
+  ],
+  "description": "Write me!",
+  "build-depends": [
+  ],
+  "provides": {
+    "Routes.pm6": "lib/Routes.pm6"
+  },
+  "perl": "6.*",
+  "version": "0.0.1"
+}

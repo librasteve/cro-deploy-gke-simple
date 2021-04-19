@@ -1,0 +1,15 @@
+---
+env:  []
+endpoints: 
+  - 
+    port-env: HICRO_PORT
+    protocol: http
+    id: http
+    name: HTTP
+    host-env: HICRO_HOST
+entrypoint: service.p6
+id: hicro
+name: hicro
+links:  []
+cro: 1
+...
