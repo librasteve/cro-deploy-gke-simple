@@ -1,30 +1,18 @@
 unit module Cro::Deploy::GKE::Simple:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
+#fixme - deconfuse web name
 
-class Cro::App is export {
+class App is export {
     has Str $.name is required;
     has Str $.version is required;
+    has Int $.target-port = 8080;
     has Str $.project-id is required;
-    has Str $.project-zone is required;
-    has Str $.ip-address;
+    has Str $.ip-address is rw;
 
-    method Str {
-        say $.name;
-        say $.version;
-        say $.cont-name;
-        say $.cont-image;
-        say $.cluster-name;
-        say $.project-id;
-        say $.project-zone;
-    }
     method cont-name {
         "{ $.name }-app"
     }
     method cont-image {
-        "gcr.io/$.project-id/$.cont-name:$.version";
-    }
-    method target-port {
-        #cro stub sets ENV HICRO_HOST="0.0.0.0" HICRO_PORT="10000"
-        %*ENV{"($.name.uc)_PORT"} // 8080
+        "gcr.io/{ $.project-id }/{ $.cont-name }:{ $.version }";
     }
     method cluster-name {
         "{ $.name }-cluster"
@@ -32,10 +20,16 @@ class Cro::App is export {
     method ip-name {
         "{ $.name }-ip"
     }
+    method dep-name {
+        "{ $.name }web"
+    }
+    method svc-name {
+        "{ $.dep-name }-backend"
+    }
 }
 
 class Manifest {
-    has Cro::App $.app;
+    has App $.app;
 }
 
 class Deployment is Manifest is export {
@@ -62,7 +56,7 @@ class Deployment is Manifest is export {
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: { $.app.name }web
+  name: { $.app.dep-name }
   labels:
     app: { $.app.name }
 spec:
@@ -77,7 +71,7 @@ spec:
         tier: web
     spec:
       containers:
-      - name: { $.app.name }-app
+      - name: { $.app.cont-name }
         image: { $.app.cont-image }
         ports:
         - containerPort: { $.app.target-port }
@@ -113,20 +107,20 @@ class IngressStaticIP is Manifest is export {
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: { $.app.name }web
+  name: { $.app.dep-name }
   annotations:
-    kubernetes.io/ingress.global-static-ip-name: { $.app.name }web-ip
+    kubernetes.io/ingress.global-static-ip-name: { $.app.ip-name }
   labels:
     app: { $.app.name }
 spec:
   backend:
-    serviceName: { $.app.name }web-backend
+    serviceName: { $.app.svc-name }
     servicePort: { $.app.target-port }
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: { $.app.name }web-backend
+  name: { $.app.svc-name }
   labels:
     app: { $.app.name }
 spec:

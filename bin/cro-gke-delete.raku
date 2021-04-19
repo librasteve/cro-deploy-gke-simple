@@ -1,63 +1,54 @@
 #!/usr/bin/env raku
 use lib '../lib';
-
-#FIXME- change name to eg. deploy.raku??
-
 use Cro::Deploy::GKE::Simple;
 
 sub MAIN(
-        Str $app-path='../examples/hello-app',
-        Str $app-name='helloweb',
-        Str $app-label='hello',
-        Str $cont-name='hello-app',
-        Str $cont-tag='1.0',
+        Str $directory where *.IO.d = '../examples/hicro',
+        Str :$appname = '',
+        Str :$version = '1.0',
          ) {
+    chdir($directory);
 
-    #Cluster params
-    my $cluster-name="{$app-name}-cluster";
+    # Get app name as enclosing directory name unless specified on command line
+    my $name = $appname || ($directory.IO.absolute ~~ m|'/' (<-[/]>*?) $|).[0].Str;
 
-    #Service params     #fixme - not used
-    my $service-name="{$app-name}-service";
+    # Get target-port from Dockerfile
+    my $target-port = 'Dockerfile'.IO.lines.grep(/EXPOSE/).split(" ").[1].Int;
 
-    #Ingress params
-    my $ip-name="{$app-name}-ip";
+    # Get project items from gcloud config
+    my $proc;
+    $proc = shell("gcloud config list", :out);
+    my $gconfig = $proc.out.slurp: :close;
+    my %gconfig = $gconfig.split("\n").grep(/'='/).split(" = ").split(" ");
 
-    my $proc;       #re-used
+    my $app = App.new(
+            :$name,
+            :$version,
+            :$target-port,
+            project-id => %gconfig<project>,
+            );
+    say "Loading app parameters => ", $app.gist;
 
-    $proc = shell "gcloud config list", :out;
-    my $config = $proc.out.slurp: :close;
-    my %config = $config.split("\n").grep(/'='/).split(" = ").split(" ");
+    my $dpm = Deployment.new(app => $app);
 
-    my Str $project-id = %config<project>;
-    my Str $project-zone = %config<zone>;
-
-    say $app-path;
-    say $app-name;
-    say $app-label;
-    say $cont-name;
-    say $cont-tag;
-    say $cluster-name;
-    say $project-id;
-    say $project-zone;
-
-    chdir("$app-path/manifests");
-    prompt("OK to delete Cro GKE ingress,service $app-label?[ret]");
+    prompt("OK to delete Cro GKE ingress,service { $app.name }?[ret]");
     say "This can take several minutes, please be patient.";
 
     say "Deleting ingress,service...";
-    shell("kubectl delete ingress,service -l app=$app-label");
+    shell("kubectl delete ingress,service -l app={ $app.name }");
 
     say "Deleting static IP...";
-    shell("gcloud compute addresses delete $ip-name --global");
+    shell("gcloud compute addresses delete { $app.ip-name } --global");
 
+    chdir("manifests");
     say "Deleting deployment...";
-    shell("kubectl delete -f {$app-name}-deployment.yaml");
+    shell("kubectl delete -f { $dpm.filename }");
 
     say "Deleting cluster...";
-    shell("gcloud container clusters delete $cluster-name");
+    shell("gcloud container clusters delete { $app.cluster-name }");
 
     say "Deleting container image...";
-    shell("gcloud container images delete gcr.io/$project-id/$cont-name:$cont-tag  --force-delete-tags --quiet");
+    shell("gcloud container images delete { $app.cont-image } --force-delete-tags --quiet");
 
     say "deletion done";
 }
