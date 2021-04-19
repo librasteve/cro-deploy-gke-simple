@@ -121,7 +121,7 @@ sub MAIN(
     shell("kubectl get ingress");
 
     say "deployment done...";
-    say "...takes approx. 3-5 mins to go live at { $app.ip-address } ...";
+    say "...takes another 3-5 mins to go live at { $app.ip-address } ...";
     say "...use <<kubectl get ingress>> for status...";
     say "...or viz. https://console.cloud.google.com";
 }
