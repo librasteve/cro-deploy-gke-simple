@@ -1,8 +1,31 @@
 [![Build Status](https://travis-ci.com/p6steve/cro-deploy-gke-simple.svg?branch=master)](https://travis-ci.com/p6steve/cro-deploy-gke-simple)
 
-Deploy Raku Cro on Google Kubernetes Engine (simple)
-Linux / macOS only
-_Take care to clean up to avoid any unwanted Google costs_
+# Deploy a raku Cro app on GKE (simple)
+_Please be sure to check clean up to avoid any unwanted bills_
+
+# SYNOPSIS
+```bash
+#usual Cro / Docker setup
+cro stub http hicro hicro
+cd hicro
+docker build -t hicro .
+docker run --rm -p 10000:10000 hicro   [local test, view in browser, stop]
+
+#deploy to GKE
+cro-gke-create.raku .
+#clean-up
+cro-gke-delete.raku .
+```
+
+# FEATURES
+This is a simple (ie. very basic) raku script to one-step deploy a Cro app to GKE, it does the following:
+* build, tag [check] and push the Docker container image to Google Container Registry
+* create a GKE cluster
+* create a global static IP address
+* create & apply Deployment and IngressStaticIP manifest files
+* delete all the above
+
+Track status (& costs) on your [Kubernetes Engine Console](https://console.cloud.google.com/kubernetes/discovery) and [Google Container Repo](https://console.cloud.google.com/gcr/images)
 
 # PREREQUISITES
 * RakudoStar and Docker
@@ -15,33 +38,3 @@ _Take care to clean up to avoid any unwanted Google costs_
 * Use gcloud config to set your project and compute zone
   * ```gcloud config set project YOUR_PROJECT_ID```
   * ```gcloud config set compute/zone YOUR_COMPUTE_ZONE``` (eg. 'us-west1-a')
-
-# SYNOPSIS
-```
-cro stub http hicro hicro
-cd hicro
-docker build -t hicro .
-docker run --rm -p 10000:10000 hicro   [local test, view in browser, stop]
-
-```
-
-# FEATURES
-This is a simple raku script for use with Linux/macOS to one-step deploy a Cro application to GKE, it does the following:
-* build, tag and check the container image from Dockerfile for Google Container Registry
-* 
-
-# EXAMPLES
-## HELLO-APP
-Drawn from the GKE tutorials for Docker Container service and Static IP ingress deployment
-* viz. https://cloud.google.com/kubernetes-engine/docs/tutorials/hello-app
-* viz. https://cloud.google.com/kubernetes-engine/docs/tutorials/configuring-domain-name-static-ip
-* actually this example app is written in go - not everyone is perfect
-* this script embeds the second part of this tutorial (using manifests for service & ingress)
-
-# SYNOPSIS
-
-```perl6
-use 
-{...}
-```
-
