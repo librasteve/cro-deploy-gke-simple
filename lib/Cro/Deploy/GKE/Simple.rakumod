@@ -4,8 +4,8 @@ unit module Cro::Deploy::GKE::Simple:ver<0.0.1>:auth<Steve Roe (p6steve@furnival
 class App is export {
     has Str $.name is required;
     has Str $.version is required;
-    has Int $.target-port = 8080;
     has Str $.project-id is required;
+    has Int $.target-port = 8080;
     has Str $.ip-address is rw;
 
     method cont-name {
