@@ -1,17 +1,26 @@
-unit module Cro::Deploy::GKE::Simples:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
-#fixme - change LICENCE to Apache License, Version 2.0
+unit module Cro::Deploy::GKE::Simple:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
 class Cro::App is export {
-    has Str $.name = 'hicro';
-    has Str $.project = 'hcccro1';
-    has Str $.version = '1.0';
+    has Str $.name is required;
+    has Str $.version is required;
+    has Str $.project-id is required;
+    has Str $.project-zone is required;
     has Str $.ip-address;
 
+    method Str {
+        say $.name;
+        say $.version;
+        say $.cont-name;
+        say $.cont-image;
+        say $.cluster-name;
+        say $.project-id;
+        say $.project-zone;
+    }
     method cont-name {
         "{ $.name }-app"
     }
     method cont-image {
-        "gcr.io/$.project/$.cont-name:$.version";
+        "gcr.io/$.project-id/$.cont-name:$.version";
     }
     method target-port {
         #cro stub sets ENV HICRO_HOST="0.0.0.0" HICRO_PORT="10000"
@@ -34,12 +43,6 @@ class Deployment is Manifest is export {
         "{ $.app.name }web-deployment.yaml";
     }
     method document {
-        #my $.app.name = 'hicro';
-        #my $.app.target-port = %*ENV{"($.app.name.uc)_PORT"} // 8080;
-        #my $.app.project-id = 'hcccro1';
-        #my $.app.cont-name = "{ $.app.name }-app";
-        #my $.app.version-tag = "1.0";
-        #my $.app.image-id = "gcr.io/$.app.project-id/$.app.cont-name:$.app.version-tag";
         qq:to/FINISH/;
 # Copyright 2020 Google LLC
 #

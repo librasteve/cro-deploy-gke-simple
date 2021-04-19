@@ -1,7 +1,7 @@
-[![Build Status](https://travis-ci.com/p6steve/raku-Physics-Constants.svg?branch=master)](https://travis-ci.com/p6steve/raku-Physics-Constants)
-^^FIXME
+[![Build Status](https://travis-ci.com/p6steve/cro-deploy-gke-simple.svg?branch=master)](https://travis-ci.com/p6steve/cro-deploy-gke-simple)
 
 Deploy Raku Cro on Google Kubernetes Engine (simple)
+Linux / macOS only
 _Take care to clean up to avoid any unwanted Google costs_
 
 # PREREQUISITES

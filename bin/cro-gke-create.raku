@@ -4,8 +4,6 @@ use lib '../lib';
 use Cro::Deploy::GKE::Simple;
 
 #`[
-my $app = Cro::App.new( name => 'hicro', project => 'hcccro1', version =>  '1.0' );
-
 my $dep-manifest = Deployment.new( app => $app );
 my $dfn = $dep-manifest.filename;
 my $ddc = $dep-manifest.document;
@@ -16,44 +14,44 @@ my $idc = $isi-manifest.document;
 ]
 
 sub MAIN(
-        Str $app-path='../examples/hello-app',
-        Str $app-name='helloweb',
-        Str $app-label='hello',
-        Str $cont-name='hello-app',
-        Str $cont-tag='1.0',
-        Bool $run-local=False,
+        Str $directory where *.IO.d = '../examples/hicro',
+        Str :$name = '',
+        Str :$version = '',
+        Bool :$run-local = False,
          ) {
 
-    my $app = Cro::App.new( name => 'hicro', project => 'hcccro1', version =>  '1.0' );
+    my $dir-path = IO::Path.new($directory);
+    my $dir-abs = $dir-path.absolute;
 
-    #Ingress params
-    #my $app.ip-name="{$app-name}-ip";
-    #my $app.ip-address;
+    $dir-abs ~~ m|'/'
 
-    my $proc;       #re-used
+    dd $dir-abs;
+    say "path-abs:", $dir-path.absolute;
+
+    chdir($dir-path);
+
+
+
+    shell "ls -al";
+    die;
+    #unless name
+
+    my $proc;   #re-used
 
     $proc = shell("gcloud config list", :out);
-    my $config = $proc.out.slurp: :close;
-    my %config = $config.split("\n").grep(/'='/).split(" = ").split(" ");
+    my $gconfig = $proc.out.slurp: :close;
+    my %gconfig = $gconfig.split("\n").grep(/'='/).split(" = ").split(" ");
 
-    my Str $project-id = %config<project>;
-    my Str $project-zone = %config<zone>;
-
-    say $app-path;
-    say $app-name;
-    say $app-label;
-    say $cont-name;
-    say $cont-tag;
-    say $app.cluster-name;
-    say $project-id;
-    say $project-zone;
-
-    chdir("$app-path");
-
-    die;
+    my $app = Cro::App.new(
+            :$name,
+            :$version,
+            project-id => %gconfig<project>,
+            project-zone => %gconfig<zone>,
+            );
+    say ~$app;
 
     say "Building and tagging docker image for GCR...";
-    shell("docker build -t gcr.io/$project-id/$cont-name:$cont-tag .");
+    shell("docker build -t { $app.cont-image } .");
 
     say "Checking docker image...";
     say "REPOSITORY                   TAG            IMAGE ID       CREATED             SIZE";
@@ -64,7 +62,7 @@ sub MAIN(
         $proc = Proc::Async.new("echo checking...");
         $proc.start;
         $proc.ready.then: {
-            shell("docker run --rm -p { $app.target-port }:{ $app.target-port } gcr.io/$project-id/$cont-name:$cont-tag");
+            shell("docker run --rm -p { $app.target-port }:{ $app.target-port } { $app.cont-image }");
         }
         sleep 2;
         shell("curl http://localhost:{ $app.target-port }");
@@ -77,14 +75,14 @@ sub MAIN(
     shell("gcloud auth configure-docker");
 
     say "Pushing docker image to GCR...";
-    shell("docker push gcr.io/$project-id/$cont-name:$cont-tag");
+    shell("docker push { $app.cont-image }");
 
     sub cluster-up {
         my $proc = shell "kubectl get nodes", :out;
         my $out = $proc.out.slurp: :close;
 
-        if    $out ~~ /Ready/   { True  }
-        else                    { False }
+        if    $out ~~ /Ready/ { True }
+        else { False }
     }
 
     say "Checking cluster status...";
@@ -102,21 +100,21 @@ sub MAIN(
 
     sub ip-address {
         my $proc = shell "gcloud compute addresses describe { $app.ip-name } --global", :out;
-        my %ip-desc = ($proc.out.slurp: :close).lines.map({.split(": ")}).flat;
+        my %ip-desc = ($proc.out.slurp: :close).lines.map({ .split(": ") }).flat;
         %ip-desc<address>;
     }
 
     say "Checking static IP address status...";
-    if $app.ip-address=ip-address() {
+    if $app.ip-address = ip-address() {
         say "...static IP address { $app.ip-address } already created."
     } else {
         say "...creating a global static IP address with name { $app.ip-name } ...";
         shell("gcloud compute addresses create { $app.ip-name } --global");
-        say "...done with IP address { $app.ip-address=ip-address }.";
+        say "...done with IP address { $app.ip-address = ip-address }.";
     }
 
-    say "Applying Ingress-Service manifest {$app-name}-ingress-static-ip.yaml.";
-    shell("kubectl apply -f { $app-name }-ingress-static-ip.yaml");
+    say "Applying Ingress-Service manifest { $app.name }-ingress-static-ip.yaml.";
+    shell("kubectl apply -f { $app.name }-ingress-static-ip.yaml");
     sleep 5;
     shell("kubectl get ingress");
 
